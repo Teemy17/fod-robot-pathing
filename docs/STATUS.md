@@ -4,7 +4,8 @@
 stable while this changes weekly. If this file and CLAUDE.md ever disagree about
 what is built, this one is right — and CLAUDE.md needs fixing.
 
-Last updated: **2026-09-30**, v0.2.0 (CV integration) plus the first real CV captures.
+Last updated: **2026-11-05**, v0.2.3. No nav code has changed since 1 October;
+what moved is Teemy's v1 firmware (below).
 
 ---
 
@@ -14,7 +15,7 @@ Everything in CLAUDE.md §4 exists. Schedule items 0–6 are built and tested;
 item 7, integration on the real chassis, has not started.
 
 ```bash
-uv run pytest                                                   # ~1370 tests, <4 s
+uv run pytest                                                   # ~1390 tests, ~4 s
 uv run fodnav-sim --set mission.mode=target --target 1.4 0.35   # chase a fastener
 uv run fodnav-sim --set mission.mode=coverage --duration 400    # sweep the arena
 ```
@@ -29,6 +30,32 @@ Releases** -- install it rather than cloning when you only need to run nav (see
 the README). It carries the stalled-camera safety fix (0.2.1) and a
 per-tick `stream.jsonl` for live displays (0.2.2), and since 0.2.3
 the default mission is the chase (`target`/`hold`).
+
+The integration harness (`JuniorSE15/fod-robot`) still pins the **v0.2.2**
+wheel, so it does not yet have the chase default or the re-aim hysteresis.
+That pin is the harness owner's to bump.
+
+## Teemy's firmware exists (2026-10-24)
+
+`Teemy17/fod-robot-esp32`, branch **`v1-encoders`**, commit `9dc726d`: a
+"nav-compatible v1 firmware build" -- encoders, per-wheel speed PID at 50 Hz,
+watchdog, e-stop, stall protection, and host-side tests of its protocol codec.
+Checked against `docs/protocol.md` on two points only, both the amendments:
+
+- the `I` line carries wheel radius and track width in **millimetres**;
+- the watchdog **arms on the first command**, not at power-on, and `H` does
+  not arm it.
+
+Nobody has checked the rest of the document against it, and nav and his
+firmware have never been run together.
+
+His constants are datasheet nominals and say so. Until they are measured and
+he builds with `-D ROBOT_CONSTANTS_MEASURED=1`, his `I` line reports `0.000`
+for ticks/rev, radius and track width, and `Esp32Link.verify` refuses it
+against any measured `robot.yaml`. That is the handshake working, not a bug.
+
+The harness's firmware submodule still tracks his `dev` branch, not
+`v1-encoders`.
 
 ## The vision interface changed under us (2026-09-10)
 
@@ -73,10 +100,10 @@ Ordered by dependency, not importance.
 2. ~~`ground.py` + `fodnav-calib-ground`.~~ **Done in software.** The
    calibration itself cannot be taken until the mount is frozen and measured
    (`HARDWARE.md` §3), and it is void the moment the mount moves.
-3. `docs/protocol.md` finalised **with Teemy** — *still open, still the long
-   pole*. The codec is written against it and the simulated firmware implements
-   it, but that is one side agreeing with itself. He has not reviewed the
-   document, and it has been amended twice since drafting.
+3. `docs/protocol.md` finalised **with Teemy** — *implemented on his side,
+   not yet proven*. His v1 build (2026-10-24) carries both amendments, so it is
+   no longer one side agreeing with itself. What is left: his explicit
+   sign-off, and one bench run of `link/esp32.py` against his firmware.
 4. ~~`control.py` + `move_to` + `fodnav-teleop`, validated in sim.~~ **Done.**
 5. ~~`servo.py` + the terminal blind leg.~~ **Done in sim**, 0.6–1.7 cm at the
    drum with the error model on. Unproven on hardware, and the number it leans
@@ -100,10 +127,11 @@ Ordered by dependency, not importance.
   jointly rather than separately.
 - **Teemy's measurements landing in `config/robot.yaml`.** `HARDWARE.md` §0
   lists the three that unblock the most, about twenty minutes between them.
-- **Teemy's review of `docs/protocol.md`**, including the two amendments, which
-  change what his firmware must do.
-- **Whether Teemy's firmware exists at all** — nobody has confirmed this. Worth
-  asking before assuming the integration is a one-afternoon job.
+- ~~**Whether Teemy's firmware exists at all.**~~ **It does** (2026-10-24,
+  branch `v1-encoders`; see above).
+- **Nav run against his firmware on the bench**: `fodnav-teleop` over USB
+  with the wheels lifted, the handshake, and the watchdog. Plus his explicit
+  sign-off on `docs/protocol.md`.
 - **The camera mount frozen and measured**, which gates the ground calibration,
   which gates every vision-driven behaviour on the real robot.
 - **Installing `fod-vision` on the Pi and proving the hardware** with his
