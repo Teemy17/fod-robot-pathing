@@ -24,7 +24,7 @@ decision only you can make. Updated at each handoff.
 |---|---|---|---|
 | PENDING | **Measure the camera mount (PRD O-3): height, down-tilt, and `fov_near_limit_m`.** Then re-run the ground calibration. | Needs the physical robot. It is the most contended number in the project: it sets Bthcorn's `lookahead` *and* our blind leg *and* the homography, and all three are invalid until it is fixed and recorded. | 2026-08-28 |
 | PENDING | **Install `fod-vision` into a 3.11 venv on the Pi** (`--system-site-packages`) and run `fodnav-run` once. | Needs the Pi. `LibraryVisionSource.start()` has never executed anywhere — the 2026-09-24 recordings came from his `capture_raw.py`, not from our adapter. | 2026-09-10 |
-| PENDING | **Get Teemy to review `docs/protocol.md`**, including the two amendments listed in `docs/CHANGELOG.md` (millimetre lengths in the `I` handshake; watchdog arms on first command). | It is a proposal he has not agreed to. If he implements something else, `link/esp32.py` is wrong. | 2026-08-28 |
+| PENDING | **Run nav against Teemy's v1 firmware on the bench**, and get his explicit sign-off on `docs/protocol.md`. He pushed a v1 build to `Teemy17/fod-robot-esp32` branch `v1-encoders` (`9dc726d`), and it carries both amendments (millimetre lengths in `I`; watchdog arms on first command). | Needs the ESP32. Nothing has run `link/esp32.py` against his code, and only those two features were checked against the spec, not the whole document. Until the constants are measured and he builds with `-D ROBOT_CONSTANTS_MEASURED=1`, his `I` line reports `0.000`, and `Esp32Link.verify` refuses it against any measured `robot.yaml` — correctly. | 2026-11-05 |
 | DONE | Get a 30 s `detail()` recording from Bthcorn's board and replay it. Three captures, 2130 frames, nav's `latest()` matches his on every one — `cv_tests/2026-09-24/output/summary.md`. | — | 2026-09-24 |
 | DONE | Push `feat/integrate-cv-library` to origin (merged to `main` as PR #3). | — | 2026-09-10 |
 
@@ -44,7 +44,7 @@ The whole stack runs on a laptop with no camera, no Pi and no robot:
 ```bash
 uv run fodnav-sim --set mission.mode=target --target 1.4 0.35   # chase a nail
 uv run fodnav-sim --set mission.mode=coverage --duration 400    # sweep the arena
-uv run pytest                                                   # ~1370 tests, <4 s
+uv run pytest                                                   # ~1390 tests, ~4 s
 ```
 
 `fodnav-sim` runs the *real* control loop, FSM, protocol codec and projection
@@ -80,8 +80,10 @@ scipy: `numpy` covers every linear-algebra need here. No robotics framework, no
 ROS, no async runtime. If something seems to need one, that is a signal the
 design drifted, not that a dependency is missing.
 
-**One spec here is still a proposal.** `docs/protocol.md` has not been reviewed
-by Teemy. The other one is no longer a proposal at all: the vision interface is
+**One spec here is ours, and is implemented but not signed off.**
+`docs/protocol.md` is nav's; Teemy has built firmware against it (branch
+`v1-encoders`) but has not formally agreed to it, and the two have never been
+run together. The other one is not ours at all: the vision interface is
 Bthcorn's, published and measured, and vendored at `docs/vendor/`.
 
 Keep every field name from either side inside one module -- `link/esp32.py` and
@@ -91,8 +93,8 @@ tests and the sim changed; nothing else did.
 
 `docs/protocol.md` has been amended twice since it was drafted, both times
 because writing the codec against it found a contradiction. Neither bumps
-`PROTO_VERSION`, because nothing implements v1 yet — but Teemy needs to know
-about both, and they are listed in `docs/CHANGELOG.md`.
+`PROTO_VERSION`, because nothing implemented v1 when they landed. Both are
+listed in `docs/CHANGELOG.md`, and Teemy's v1 build implements both.
 
 ---
 
